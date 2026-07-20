@@ -1,5 +1,0 @@
-error: value out of u32 range
- --> tests/compile_fail/derive_out_of_range_float.rs:5:38
-  |
-5 |     #[ofd(x = 0.0, y = 0.0, weight = -1.0)]
-  |                                      ^

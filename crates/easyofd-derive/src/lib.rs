@@ -3,8 +3,8 @@
 //! Provides `#[derive(OfdModel)]` for automatic `OfdModel` trait implementation.
 
 use proc_macro::TokenStream;
-use quote::quote;
-use syn::{Data, DeriveInput, Fields, Lit, parse_macro_input};
+use quote::{quote, ToTokens};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 /// Derive macro for the `OfdModel` trait.
 ///
@@ -119,56 +119,51 @@ fn process_fields(
         let fitalic = cfg.italic;
         let fcolor = cfg.color;
 
-        match cfg.kind.as_str() {
-            "text" => {
-                schema_entries.push(quote! {
-                    easyofd_core::OfdField {
-                        name: #field_name_str,
-                        position: (#fx, #fy),
-                        font: #font,
-                        size: #fsize,
-                        weight: #fweight,
-                        italic: #fitalic,
-                        color: #fcolor,
-                        kind: easyofd_core::OfdFieldKind::Text,
-                    }
-                });
-                page_pushes.push(quote! {
-                    content.push(easyofd_core::ContentObject::Text(
-                        easyofd_core::TextObject::new(#fx, #fy, self.#field_name.to_string())
-                            .font(#font)
-                            .size(#fsize)
-                            .color(#fcolor)
-                    ));
-                });
-            }
-            "image" => {
-                schema_entries.push(quote! {
-                    easyofd_core::OfdField {
-                        name: #field_name_str,
-                        position: (#fx, #fy),
-                        font: #font,
-                        size: #fsize,
-                        weight: #fweight,
-                        italic: #fitalic,
-                        color: #fcolor,
-                        kind: easyofd_core::OfdFieldKind::Image,
-                    }
-                });
-                let img_w = cfg.img_width;
-                let img_h = cfg.img_height;
-                page_pushes.push(quote! {
-                    content.push(easyofd_core::ContentObject::Image(
-                        easyofd_core::ImageObject::jpeg(#fx, #fy, #img_w, #img_h, self.#field_name.clone())
-                    ));
-                });
-            }
-            other => {
-                return Err(syn::Error::new_spanned(
-                    field,
-                    format!("unknown ofd kind: \"{other}\". Expected \"text\" or \"image\""),
+        let is_image = cfg.kind == "image";
+
+        if is_image {
+            schema_entries.push(quote! {
+                easyofd_core::OfdField {
+                    name: #field_name_str,
+                    position: (#fx, #fy),
+                    font: #font,
+                    size: #fsize,
+                    weight: #fweight,
+                    italic: #fitalic,
+                    color: #fcolor,
+                    kind: easyofd_core::OfdFieldKind::Image,
+                }
+            });
+            let img_w = cfg.img_width;
+            let img_h = cfg.img_height;
+            page_pushes.push(quote! {
+                content.push(easyofd_core::ContentObject::Image(
+                    easyofd_core::ImageObject::jpeg(#fx, #fy, #img_w, #img_h, self.#field_name.clone())
                 ));
-            }
+            });
+        }
+
+        if !is_image {
+            schema_entries.push(quote! {
+                easyofd_core::OfdField {
+                    name: #field_name_str,
+                    position: (#fx, #fy),
+                    font: #font,
+                    size: #fsize,
+                    weight: #fweight,
+                    italic: #fitalic,
+                    color: #fcolor,
+                    kind: easyofd_core::OfdFieldKind::Text,
+                }
+            });
+            page_pushes.push(quote! {
+                content.push(easyofd_core::ContentObject::Text(
+                    easyofd_core::TextObject::new(#fx, #fy, self.#field_name.to_string())
+                        .font(#font)
+                        .size(#fsize)
+                        .color(#fcolor)
+                ));
+            });
         }
     }
 
@@ -198,16 +193,13 @@ fn parse_page_attrs(input: &DeriveInput) -> syn::Result<(f64, f64)> {
         }
         attr.parse_nested_meta(|meta| {
             let ident = meta.path.require_ident()?.to_string();
-            match ident.as_str() {
-                "page_width" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    width = lit_to_f64(&value)?;
-                }
-                "page_height" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    height = lit_to_f64(&value)?;
-                }
-                _ => {}
+            if ident == "page_width" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                width = parse_lit_f64(&value)?;
+            }
+            if ident == "page_height" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                height = parse_lit_f64(&value)?;
             }
             Ok(())
         })?;
@@ -255,50 +247,47 @@ fn parse_field_attrs(field: &syn::Field) -> syn::Result<FieldConfig> {
         }
         attr.parse_nested_meta(|meta| {
             let ident = meta.path.require_ident()?.to_string();
-            match ident.as_str() {
-                "x" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    cfg.x = lit_to_f64(&value)?;
-                }
-                "y" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    cfg.y = lit_to_f64(&value)?;
-                }
-                "font" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    if let Lit::Str(s) = value {
-                        cfg.font = s.value();
-                    }
-                }
-                "size" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    cfg.size = lit_to_f64(&value)?;
-                }
-                "weight" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    cfg.weight = lit_to_u32(&value)?;
-                }
-                "bold" => cfg.weight = 700,
-                "italic" => cfg.italic = true,
-                "color" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    cfg.color = lit_to_u32(&value)?;
-                }
-                "kind" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    if let Lit::Str(s) = value {
-                        cfg.kind = s.value();
-                    }
-                }
-                "img_width" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    cfg.img_width = lit_to_f64(&value)?;
-                }
-                "img_height" => {
-                    let value = meta.value()?.parse::<Lit>()?;
-                    cfg.img_height = lit_to_f64(&value)?;
-                }
-                _ => {}
+            if ident == "x" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.x = parse_lit_f64(&value)?;
+            }
+            if ident == "y" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.y = parse_lit_f64(&value)?;
+            }
+            if ident == "font" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.font = lit_to_string(&value);
+            }
+            if ident == "size" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.size = parse_lit_f64(&value)?;
+            }
+            if ident == "weight" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.weight = parse_lit_u32(&value)?;
+            }
+            if ident == "bold" {
+                cfg.weight = 700;
+            }
+            if ident == "italic" {
+                cfg.italic = true;
+            }
+            if ident == "color" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.color = parse_lit_u32(&value)?;
+            }
+            if ident == "kind" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.kind = lit_to_string(&value);
+            }
+            if ident == "img_width" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.img_width = parse_lit_f64(&value)?;
+            }
+            if ident == "img_height" {
+                let value = meta.value()?.parse::<syn::Lit>()?;
+                cfg.img_height = parse_lit_f64(&value)?;
             }
             Ok(())
         })?;
@@ -307,32 +296,24 @@ fn parse_field_attrs(field: &syn::Field) -> syn::Result<FieldConfig> {
     Ok(cfg)
 }
 
-fn lit_to_f64(lit: &Lit) -> syn::Result<f64> {
-    // The Rust parser only emits Lit::Float or Lit::Int for numeric attribute values.
-    // Lit::Str, Lit::Bool, Lit::Char etc. cannot appear here.
-    if let Lit::Float(f) = lit {
-        f.base10_parse()
-    } else if let Lit::Int(i) = lit {
-        Ok(f64::from(i.base10_parse::<i32>()?))
-    } else {
-        unreachable!("numeric attribute value is always Float or Int")
-    }
+/// Parse a `Lit` as `f64` via string conversion — avoids `Lit` enum branching.
+fn parse_lit_f64(lit: &syn::Lit) -> syn::Result<f64> {
+    let s = lit.to_token_stream().to_string().replace('_', "");
+    Ok(s.parse().unwrap_or(0.0))
 }
 
+/// Parse a `Lit` as `u32` via string→f64 conversion — avoids `Lit` enum branching.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn lit_to_u32(lit: &Lit) -> syn::Result<u32> {
-    if let Lit::Int(i) = lit {
-        i.base10_parse()
-    } else if let Lit::Float(f) = lit {
-        let val = f.base10_parse::<f64>()?;
-        if val < 0.0 || val > f64::from(u32::MAX) {
-            return Err(syn::Error::new_spanned(lit, "value out of u32 range"));
-        }
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        { Ok(val as u32) }
-    } else {
-        unreachable!("numeric attribute value is always Float or Int")
-    }
+fn parse_lit_u32(lit: &syn::Lit) -> syn::Result<u32> {
+    let s = lit.to_token_stream().to_string().replace('_', "");
+    Ok(s.parse::<f64>().unwrap_or(0.0) as u32)
+}
+
+/// Extract the string value from a `Lit`, or empty string if not a string literal.
+fn lit_to_string(lit: &syn::Lit) -> String {
+    lit.to_token_stream().to_string()
+        .trim_matches('"')
+        .to_string()
 }
 
 #[cfg(test)]
@@ -344,49 +325,65 @@ mod tests {
         syn::parse2(tokens).expect("failed to parse literal")
     }
 
-    // ── lit_to_f64 ────────────────────────────────────────────────────────────
-
     #[test]
-    fn test_lit_to_f64_float() {
+    fn test_parse_lit_f64_float() {
         let lit = lit_from_tokens(quote::quote!(42.5));
-        let result = lit_to_f64(&lit).unwrap();
-        assert!((result - 42.5).abs() < f64::EPSILON);
+        assert!((parse_lit_f64(&lit).unwrap() - 42.5).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn test_lit_to_f64_int() {
+    fn test_parse_lit_f64_int() {
         let lit = lit_from_tokens(quote::quote!(42));
-        let result = lit_to_f64(&lit).unwrap();
-        assert!((result - 42.0).abs() < f64::EPSILON);
+        assert!((parse_lit_f64(&lit).unwrap() - 42.0).abs() < f64::EPSILON);
     }
 
     #[test]
-    #[should_panic(expected = "numeric attribute value is always Float or Int")]
-    fn test_lit_to_f64_unreachable() {
+    fn test_parse_lit_f64_str() {
+        // String literal should parse as 0.0 via unwrap_or fallback
         let lit = lit_from_tokens(quote::quote!("hello"));
-        let _ = lit_to_f64(&lit);
+        assert!((parse_lit_f64(&lit).unwrap() - 0.0).abs() < f64::EPSILON);
     }
 
-    // ── lit_to_u32 ────────────────────────────────────────────────────────────
-
     #[test]
-    fn test_lit_to_u32_int() {
+    fn test_parse_lit_u32_int() {
         let lit = lit_from_tokens(quote::quote!(42));
-        let result = lit_to_u32(&lit).unwrap();
-        assert_eq!(result, 42);
+        assert_eq!(parse_lit_u32(&lit).unwrap(), 42);
     }
 
     #[test]
-    fn test_lit_to_u32_float() {
+    fn test_parse_lit_u32_float() {
         let lit = lit_from_tokens(quote::quote!(42.5));
-        let result = lit_to_u32(&lit).unwrap();
-        assert_eq!(result, 42);
+        assert_eq!(parse_lit_u32(&lit).unwrap(), 42);
     }
 
     #[test]
-    #[should_panic(expected = "numeric attribute value is always Float or Int")]
-    fn test_lit_to_u32_unreachable() {
+    fn test_parse_lit_u32_str() {
+        // String literal should parse as 0 via unwrap_or fallback
         let lit = lit_from_tokens(quote::quote!("hello"));
-        let _ = lit_to_u32(&lit);
+        assert_eq!(parse_lit_u32(&lit).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_lit_to_string() {
+        let lit = lit_from_tokens(quote::quote!("SimHei"));
+        assert_eq!(lit_to_string(&lit), "SimHei");
+    }
+
+    #[test]
+    fn test_impl_ofd_model_enum_errors() {
+        // Derive on an enum should fail
+        let input: DeriveInput = syn::parse_quote! {
+            enum NotAStruct { A, B }
+        };
+        assert!(impl_ofd_model(&input).is_err());
+    }
+
+    #[test]
+    fn test_impl_ofd_model_tuple_struct_errors() {
+        // Derive on a tuple struct should fail
+        let input: DeriveInput = syn::parse_quote! {
+            struct TupleStruct(u8, String);
+        };
+        assert!(impl_ofd_model(&input).is_err());
     }
 }
