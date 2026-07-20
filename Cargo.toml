@@ -5,6 +5,7 @@ members = [
     "crates/easyofd-derive",
     "crates/easyofd-derive-impl",
     "crates/easyofd-reader",
+    "crates/easyofd-template",
     "crates/easyofd-writer",
     "crates/easyofd",
 ]
@@ -24,6 +25,7 @@ easyofd-core = { path = "crates/easyofd-core" }
 easyofd-derive = { path = "crates/easyofd-derive" }
 easyofd-derive-impl = { path = "crates/easyofd-derive-impl" }
 easyofd-reader = { path = "crates/easyofd-reader" }
+easyofd-template = { path = "crates/easyofd-template" }
 easyofd-writer = { path = "crates/easyofd-writer" }
 easyofd = { path = "crates/easyofd" }
 
