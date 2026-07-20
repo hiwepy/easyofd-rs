@@ -1,6 +1,0 @@
-error: unknown ofd kind: "table". Expected "text" or "image"
- --> tests/compile_fail/derive_unknown_kind.rs:5:5
-  |
-5 | /     #[ofd(x = 0.0, y = 0.0, kind = "table")]
-6 | |     field: String,
-  | |_________________^
