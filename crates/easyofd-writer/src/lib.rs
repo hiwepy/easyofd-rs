@@ -101,9 +101,7 @@ impl OfdWriter {
             .compression_method(zip::CompressionMethod::Deflated);
 
         self.write_zip(&mut zip, &options)?;
-        let cursor = zip.finish().map_err(|e| {
-            easyofd_core::OfdError::Zip(format!("failed to finish ZIP: {e}"))
-        })?;
+        let cursor = zip.finish().map_err(zip_err)?;
         Ok(cursor.into_inner())
     }
 

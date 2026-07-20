@@ -644,7 +644,7 @@ Elements auto-position:
 | Lint | `cargo clippy --all-targets` | &#9989; 0 warnings |
 | Build | `cargo check --workspace` | &#9989; |
 | Test | `cargo test --workspace` | &#9989; 137 tests |
-| Coverage | `cargo llvm-cov --all-targets` | &#9989; 98.14% |
+| Coverage | `cargo llvm-cov --all-targets` | &#9989; 99.07% |
 
 ## Appendix B: File Inventory
 
