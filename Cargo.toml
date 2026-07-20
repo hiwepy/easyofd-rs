@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/easyofd-core",
+    "crates/easyofd-derive",
+    "crates/easyofd-writer",
+    "crates/easyofd",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+license = "Apache-2.0"
+repository = "https://github.com/easyofd/easyofd-rs"
+description = "A Rust library for easy OFD (Open Fixed-layout Document) operations, inspired by EasyExcel"
+keywords = ["ofd", "document", "writer", "reader", "easyofd"]
+categories = ["encoding", "parser"]
+
+[workspace.dependencies]
+easyofd-core = { path = "crates/easyofd-core" }
+easyofd-derive = { path = "crates/easyofd-derive" }
+easyofd-writer = { path = "crates/easyofd-writer" }
+easyofd = { path = "crates/easyofd" }
+
+thiserror = "2"
+chrono = "0.4"
+uuid = { version = "1", features = ["v4"] }
+zip = "0.6"
+quick-xml = "0.31"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"

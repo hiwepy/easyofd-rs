@@ -1,0 +1,5 @@
+error: OfdModel can only be derived for structs with named fields
+ --> tests/compile_fail/derive_tuple.rs:4:1
+  |
+4 | struct TupleStruct(String, i32);
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

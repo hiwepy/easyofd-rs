@@ -1,0 +1,7 @@
+error: OfdModel can only be derived for structs
+ --> tests/compile_fail/derive_enum.rs:4:1
+  |
+4 | / enum NotAStruct {
+5 | |     Variant,
+6 | | }
+  | |_^

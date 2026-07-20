@@ -1,0 +1,15 @@
+[package]
+name = "easyofd-core"
+description = "Core types, traits, and models for easyofd-rs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+chrono = { workspace = true }
+
+[lints]
+workspace = true

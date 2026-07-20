@@ -1,0 +1,6 @@
+/target
+*.profraw
+*.profdata
+lcov.info
+Cargo.lock
+lcov*.info

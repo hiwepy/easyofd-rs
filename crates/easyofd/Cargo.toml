@@ -1,0 +1,21 @@
+[package]
+name = "easyofd"
+description = "Easy OFD — a Rust library for easy OFD document operations"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+easyofd-core = { workspace = true }
+easyofd-derive = { workspace = true }
+easyofd-writer = { workspace = true }
+
+[dev-dependencies]
+chrono = { workspace = true }
+zip = { workspace = true }
+trybuild = "1"
+
+[lints]
+workspace = true
