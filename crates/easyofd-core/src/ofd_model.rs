@@ -147,10 +147,7 @@ mod tests {
         assert!((page.width - 210.0).abs() < f64::EPSILON);
         assert!((page.height - 297.0).abs() < f64::EPSILON);
         assert_eq!(page.content.len(), 1);
-        let ContentObject::Text(ref t) = page.content[0] else {
-            panic!("expected Text");
-        };
-        assert_eq!(t.text, "hello");
+        assert!(matches!(&page.content[0], ContentObject::Text(t) if t.text == "hello"));
     }
 
     #[test]

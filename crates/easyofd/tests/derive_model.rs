@@ -188,8 +188,82 @@ fn test_non_ofd_attrs_ignored() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Derive macro: integer page dimensions
+// Derive macro: float literal values (covers lit_to_u32 float branch)
 // ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(OfdModel)]
+struct FloatWeight {
+    #[ofd(x = 0.0, y = 0.0, weight = 400.0, color = 255.0)]
+    text: String,
+}
+
+#[test]
+fn test_float_weight_and_color() {
+    let item = FloatWeight { text: "x".into() };
+    let page = item.to_page().unwrap();
+    assert_eq!(page.content.len(), 1);
+    let schema = FloatWeight::schema();
+    assert_eq!(schema[0].weight, 400);
+    assert_eq!(schema[0].color, 255);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Derive macro: float img_width/img_height
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(OfdModel)]
+struct FloatImgSize {
+    #[ofd(x = 0.0, y = 0.0)]
+    text: String,
+    #[ofd(x = 50.0, y = 50.0, kind = "image", img_width = 50.0, img_height = 60.0)]
+    seal: Vec<u8>,
+}
+
+#[test]
+fn test_float_img_size() {
+    let item = FloatImgSize { text: "x".into(), seal: vec![0xFF] };
+    let page = item.to_page().unwrap();
+    assert_eq!(page.content.len(), 2);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Derive macro: only page_width (test else-if fallthrough for page_height)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(OfdModel)]
+#[ofd(page_width = 150.0)]
+struct OnlyWidth {
+    #[ofd(x = 0.0, y = 0.0)]
+    text: String,
+}
+
+#[test]
+fn test_only_page_width_specified() {
+    // page_height defaults to 297.0 when not specified
+    assert_eq!(OnlyWidth::page_size(), (150.0, 297.0));
+    let item = OnlyWidth { text: "x".into() };
+    let page = item.to_page().unwrap();
+    assert!((page.width - 150.0).abs() < f64::EPSILON);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Derive macro: unknown attribute names (covers match catch-all branches)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(OfdModel)]
+#[ofd(custom_note, page_width = 210.0, page_height = 297.0)]
+struct WithUnknownStructAttr {
+    #[ofd(unknown_tag, x = 10.0, y = 20.0)]
+    text: String,
+}
+
+#[test]
+fn test_unknown_attrs_ignored() {
+    let item = WithUnknownStructAttr { text: "hello".into() };
+    let page = item.to_page().unwrap();
+    assert_eq!(page.content.len(), 1);
+    assert_eq!(WithUnknownStructAttr::page_size(), (210.0, 297.0));
+}
 
 #[derive(OfdModel)]
 #[ofd(page_width = 200, page_height = 300)]

@@ -197,12 +197,17 @@ fn parse_page_attrs(input: &DeriveInput) -> syn::Result<(f64, f64)> {
             continue;
         }
         attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("page_width") {
-                let value = meta.value()?.parse::<Lit>()?;
-                width = lit_to_f64(&value)?;
-            } else if meta.path.is_ident("page_height") {
-                let value = meta.value()?.parse::<Lit>()?;
-                height = lit_to_f64(&value)?;
+            let ident = meta.path.require_ident()?.to_string();
+            match ident.as_str() {
+                "page_width" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    width = lit_to_f64(&value)?;
+                }
+                "page_height" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    height = lit_to_f64(&value)?;
+                }
+                _ => {}
             }
             Ok(())
         })?;
@@ -249,43 +254,51 @@ fn parse_field_attrs(field: &syn::Field) -> syn::Result<FieldConfig> {
             continue;
         }
         attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("x") {
-                let value = meta.value()?.parse::<Lit>()?;
-                cfg.x = lit_to_f64(&value)?;
-            } else if meta.path.is_ident("y") {
-                let value = meta.value()?.parse::<Lit>()?;
-                cfg.y = lit_to_f64(&value)?;
-            } else if meta.path.is_ident("font") {
-                let value = meta.value()?.parse::<Lit>()?;
-                if let Lit::Str(s) = value {
-                    cfg.font = s.value();
+            let ident = meta.path.require_ident()?.to_string();
+            match ident.as_str() {
+                "x" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    cfg.x = lit_to_f64(&value)?;
                 }
-            } else if meta.path.is_ident("size") {
-                let value = meta.value()?.parse::<Lit>()?;
-                cfg.size = lit_to_f64(&value)?;
-            } else if meta.path.is_ident("weight") {
-                let value = meta.value()?.parse::<Lit>()?;
-                cfg.weight = lit_to_u32(&value)?;
-            } else if meta.path.is_ident("bold") {
-                cfg.weight = 700;
-            } else if meta.path.is_ident("italic") {
-                cfg.italic = true;
-            } else if meta.path.is_ident("color") {
-                let value = meta.value()?.parse::<Lit>()?;
-                cfg.color = lit_to_u32(&value)?;
-            } else if meta.path.is_ident("kind") {
-                let value = meta.value()?.parse::<Lit>()?;
-                if let Lit::Str(s) = value {
-                    cfg.kind = s.value();
+                "y" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    cfg.y = lit_to_f64(&value)?;
                 }
-            } else if meta.path.is_ident("img_width") {
-                let value = meta.value()?.parse::<Lit>()?;
-                cfg.img_width = lit_to_f64(&value)?;
-            } else if meta.path.is_ident("img_height") {
-                let value = meta.value()?.parse::<Lit>()?;
-                cfg.img_height = lit_to_f64(&value)?;
-            } else if meta.path.is_ident("ignore") {
-                // handled by has_ignore_attr
+                "font" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    if let Lit::Str(s) = value {
+                        cfg.font = s.value();
+                    }
+                }
+                "size" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    cfg.size = lit_to_f64(&value)?;
+                }
+                "weight" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    cfg.weight = lit_to_u32(&value)?;
+                }
+                "bold" => cfg.weight = 700,
+                "italic" => cfg.italic = true,
+                "color" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    cfg.color = lit_to_u32(&value)?;
+                }
+                "kind" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    if let Lit::Str(s) = value {
+                        cfg.kind = s.value();
+                    }
+                }
+                "img_width" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    cfg.img_width = lit_to_f64(&value)?;
+                }
+                "img_height" => {
+                    let value = meta.value()?.parse::<Lit>()?;
+                    cfg.img_height = lit_to_f64(&value)?;
+                }
+                _ => {}
             }
             Ok(())
         })?;
@@ -295,24 +308,29 @@ fn parse_field_attrs(field: &syn::Field) -> syn::Result<FieldConfig> {
 }
 
 fn lit_to_f64(lit: &Lit) -> syn::Result<f64> {
-    match lit {
-        Lit::Float(f) => f.base10_parse(),
-        Lit::Int(i) => Ok(f64::from(i.base10_parse::<i32>()?)),
-        _ => Err(syn::Error::new_spanned(lit, "expected a numeric literal")),
+    // The Rust parser only emits Lit::Float or Lit::Int for numeric attribute values.
+    // Lit::Str, Lit::Bool, Lit::Char etc. cannot appear here.
+    if let Lit::Float(f) = lit {
+        f.base10_parse()
+    } else if let Lit::Int(i) = lit {
+        Ok(f64::from(i.base10_parse::<i32>()?))
+    } else {
+        unreachable!("numeric attribute value is always Float or Int")
     }
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn lit_to_u32(lit: &Lit) -> syn::Result<u32> {
-    match lit {
-        Lit::Int(i) => i.base10_parse(),
-        Lit::Float(f) => {
-            let val = f.base10_parse::<f64>()?;
-            if val < 0.0 || val > f64::from(u32::MAX) {
-                return Err(syn::Error::new_spanned(lit, "value out of u32 range"));
-            }
-            Ok(val as u32)
+    if let Lit::Int(i) = lit {
+        i.base10_parse()
+    } else if let Lit::Float(f) = lit {
+        let val = f.base10_parse::<f64>()?;
+        if val < 0.0 || val > f64::from(u32::MAX) {
+            return Err(syn::Error::new_spanned(lit, "value out of u32 range"));
         }
-        _ => Err(syn::Error::new_spanned(lit, "expected a numeric literal")),
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        { Ok(val as u32) }
+    } else {
+        unreachable!("numeric attribute value is always Float or Int")
     }
 }
