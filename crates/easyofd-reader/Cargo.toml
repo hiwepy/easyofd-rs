@@ -1,6 +1,6 @@
 [package]
-name = "easyofd"
-description = "Easy OFD — a Rust library for easy OFD document operations"
+name = "easyofd-reader"
+description = "OFD file reader for easyofd-rs"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,14 +9,13 @@ repository.workspace = true
 
 [dependencies]
 easyofd-core = { workspace = true }
-easyofd-derive = { workspace = true }
-easyofd-reader = { workspace = true }
-easyofd-writer = { workspace = true }
-
-[dev-dependencies]
+thiserror = { workspace = true }
 chrono = { workspace = true }
 zip = { workspace = true }
-trybuild = "1"
+quick-xml = { workspace = true }
+
+[dev-dependencies]
+easyofd-writer = { workspace = true }
 
 [lints]
 workspace = true
