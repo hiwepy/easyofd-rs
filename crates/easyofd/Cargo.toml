@@ -11,6 +11,7 @@ repository.workspace = true
 easyofd-core = { workspace = true }
 easyofd-derive = { workspace = true }
 easyofd-reader = { workspace = true }
+easyofd-template = { workspace = true }
 easyofd-writer = { workspace = true }
 
 [dev-dependencies]

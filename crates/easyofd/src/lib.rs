@@ -55,6 +55,9 @@ pub use easyofd_writer::{OfdWriter, WriteOptions};
 // Re-export reader for advanced usage.
 pub use easyofd_reader::OfdReader;
 
+/// Re-export template for advanced usage.
+pub use easyofd_template::OfdTemplateFiller;
+
 // ─── EasyOfd Static Factory ──────────────────────────────────────────────────
 
 /// The main entry point for easyofd operations.
@@ -130,6 +133,20 @@ impl EasyOfd {
     /// Returns an error if the data is not a valid OFD document.
     pub fn read_from_bytes(data: &[u8]) -> OfdResult<OfdReader> {
         OfdReader::from_bytes(data)
+    }
+
+    /// Fill an OFD template with placeholder values.
+    ///
+    /// Replaces `{key}` patterns in XML content with values from the data map.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the template file cannot be read.
+    pub fn fill_template(
+        template_path: impl AsRef<std::path::Path>,
+        data: &std::collections::HashMap<String, String>,
+    ) -> OfdResult<OfdTemplateFiller> {
+        OfdTemplateFiller::fill(template_path, data)
     }
 }
 
