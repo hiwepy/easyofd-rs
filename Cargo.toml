@@ -4,6 +4,7 @@ members = [
     "crates/easyofd-core",
     "crates/easyofd-derive",
     "crates/easyofd-derive-impl",
+    "crates/easyofd-reader",
     "crates/easyofd-writer",
     "crates/easyofd",
 ]
@@ -22,6 +23,7 @@ categories = ["encoding", "parser"]
 easyofd-core = { path = "crates/easyofd-core" }
 easyofd-derive = { path = "crates/easyofd-derive" }
 easyofd-derive-impl = { path = "crates/easyofd-derive-impl" }
+easyofd-reader = { path = "crates/easyofd-reader" }
 easyofd-writer = { path = "crates/easyofd-writer" }
 easyofd = { path = "crates/easyofd" }
 

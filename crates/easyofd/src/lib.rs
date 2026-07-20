@@ -52,6 +52,9 @@ pub use easyofd_derive::OfdModel;
 // Re-export writer internals for advanced usage.
 pub use easyofd_writer::{OfdWriter, WriteOptions};
 
+// Re-export reader for advanced usage.
+pub use easyofd_reader::OfdReader;
+
 // ─── EasyOfd Static Factory ──────────────────────────────────────────────────
 
 /// The main entry point for easyofd operations.
@@ -105,6 +108,28 @@ impl EasyOfd {
         let mut writer = OfdWriter::new();
         writer.add_pages(pages);
         writer.build()
+    }
+
+    /// Open and parse an OFD file for reading.
+    ///
+    /// Returns an [`OfdReader`] that provides access to pages and text content.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or is not a valid OFD document.
+    pub fn read(path: impl AsRef<std::path::Path>) -> OfdResult<OfdReader> {
+        OfdReader::open(path)
+    }
+
+    /// Parse an OFD file from in-memory bytes.
+    ///
+    /// Returns an [`OfdReader`] for extracting content.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data is not a valid OFD document.
+    pub fn read_from_bytes(data: &[u8]) -> OfdResult<OfdReader> {
+        OfdReader::from_bytes(data)
     }
 }
 
