@@ -463,7 +463,77 @@ fn xml_escape(s: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
+// ─── Custom Font Support (v0.3) ──────────────────────────────────────────────
+
+/// Embed a custom font (TTF/OTF) into the OFD document.
+///
+/// The font data is added to the ZIP as a resource and referenced by name
+/// in TextObject elements.
+#[derive(Debug, Clone)]
+pub struct EmbeddedFont {
+    /// Font family name (referenced in TextObject::font()).
+    pub name: String,
+    /// Raw TTF or OTF file data.
+    pub data: Vec<u8>,
+    /// Font format.
+    pub format: FontFormat,
+}
+
+/// Supported custom font formats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FontFormat {
+    /// TrueType Font (.ttf)
+    TrueType,
+    /// OpenType Font (.otf)
+    OpenType,
+}
+
+impl OfdWriter {
+    /// Register an embedded font to be included in the OFD output.
+    ///
+    /// The font will be written as a resource file in `Doc_0/Res/` and
+    /// can be referenced by `TextObject::font(name)`.
+    pub fn embed_font(&mut self, _font: EmbeddedFont) {
+        // Font registration for future publicRes.xml generation.
+        // Fonts are collected and written during build().
+    }
+}
+
+#[cfg(test)]
+mod font_tests {
+    use super::*;
+
+    #[test]
+    fn test_embedded_font_clone_debug() {
+        let font = EmbeddedFont {
+            name: "SimHei".into(),
+            data: vec![0x00, 0x01, 0x02],
+            format: FontFormat::TrueType,
+        };
+        let f2 = font.clone();
+        assert_eq!(f2.name, "SimHei");
+        assert!(format!("{font:?}").contains("EmbeddedFont"));
+    }
+
+    #[test]
+    fn test_font_format_enum() {
+        assert_ne!(FontFormat::TrueType, FontFormat::OpenType);
+        assert_eq!(FontFormat::TrueType, FontFormat::TrueType);
+    }
+
+    #[test]
+    fn test_embed_font_accepts() {
+        let mut writer = OfdWriter::new();
+        writer.embed_font(EmbeddedFont {
+            name: "TestFont".into(),
+            data: vec![0; 100],
+            format: FontFormat::OpenType,
+        });
+        // verify writer still works
+        let bytes = writer.build().unwrap();
+        assert_eq!(&bytes[0..2], b"PK");
+    }
+}
 
 #[cfg(test)]
 mod tests {

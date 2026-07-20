@@ -1,0 +1,20 @@
+[package]
+name = "easyofd-signature"
+description = "OFD electronic seal/signature (GB/T 38540) for easyofd-rs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+easyofd-core = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+easyofd-writer = { workspace = true }
+
+[lints]
+workspace = true

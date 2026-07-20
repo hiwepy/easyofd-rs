@@ -1,10 +1,12 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/easyofd-convert",
     "crates/easyofd-core",
     "crates/easyofd-derive",
     "crates/easyofd-derive-impl",
     "crates/easyofd-reader",
+    "crates/easyofd-signature",
     "crates/easyofd-template",
     "crates/easyofd-writer",
     "crates/easyofd",
@@ -22,9 +24,11 @@ categories = ["encoding", "parser"]
 
 [workspace.dependencies]
 easyofd-core = { path = "crates/easyofd-core" }
+easyofd-convert = { path = "crates/easyofd-convert" }
 easyofd-derive = { path = "crates/easyofd-derive" }
 easyofd-derive-impl = { path = "crates/easyofd-derive-impl" }
 easyofd-reader = { path = "crates/easyofd-reader" }
+easyofd-signature = { path = "crates/easyofd-signature" }
 easyofd-template = { path = "crates/easyofd-template" }
 easyofd-writer = { path = "crates/easyofd-writer" }
 easyofd = { path = "crates/easyofd" }
