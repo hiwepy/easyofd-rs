@@ -50,13 +50,19 @@ pub use easyofd_core::{
 pub use easyofd_derive::OfdModel;
 
 // Re-export writer internals for advanced usage.
-pub use easyofd_writer::{OfdWriter, WriteOptions};
+pub use easyofd_writer::{OfdWriter, WriteOptions, EmbeddedFont, FontFormat};
 
 // Re-export reader for advanced usage.
 pub use easyofd_reader::OfdReader;
 
 /// Re-export template for advanced usage.
 pub use easyofd_template::OfdTemplateFiller;
+
+// Re-export signature types for advanced usage.
+pub use easyofd_signature::{ElectronicSeal, OfdSignatureBuilder, SignatureAlgorithm, SignedOfd};
+
+// Re-export convert functions for advanced usage.
+pub use easyofd_convert::{pdf_to_ofd, ofd_to_pdf, convert_image, ConvertOptions, ImageConvertFormat};
 
 // ─── EasyOfd Static Factory ──────────────────────────────────────────────────
 

@@ -8,9 +8,11 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+easyofd-convert = { workspace = true }
 easyofd-core = { workspace = true }
 easyofd-derive = { workspace = true }
 easyofd-reader = { workspace = true }
+easyofd-signature = { workspace = true }
 easyofd-template = { workspace = true }
 easyofd-writer = { workspace = true }
 
