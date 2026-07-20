@@ -1,17 +1,14 @@
 [package]
-name = "easyofd-derive"
-description = "Derive macros for easyofd-rs (#[derive(OfdModel)])"
+name = "easyofd-derive-impl"
+description = "Implementation logic for the #[derive(OfdModel)] proc macro"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[lib]
-proc-macro = true
-
 [dependencies]
-easyofd-derive-impl = { workspace = true }
+easyofd-core = { workspace = true }
 syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"

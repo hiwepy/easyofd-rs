@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/easyofd-core",
     "crates/easyofd-derive",
+    "crates/easyofd-derive-impl",
     "crates/easyofd-writer",
     "crates/easyofd",
 ]
@@ -20,6 +21,7 @@ categories = ["encoding", "parser"]
 [workspace.dependencies]
 easyofd-core = { path = "crates/easyofd-core" }
 easyofd-derive = { path = "crates/easyofd-derive" }
+easyofd-derive-impl = { path = "crates/easyofd-derive-impl" }
 easyofd-writer = { path = "crates/easyofd-writer" }
 easyofd = { path = "crates/easyofd" }
 
