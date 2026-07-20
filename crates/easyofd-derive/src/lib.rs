@@ -334,3 +334,59 @@ fn lit_to_u32(lit: &Lit) -> syn::Result<u32> {
         unreachable!("numeric attribute value is always Float or Int")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use syn::Lit;
+
+    fn lit_from_tokens(tokens: proc_macro2::TokenStream) -> Lit {
+        syn::parse2(tokens).expect("failed to parse literal")
+    }
+
+    // ── lit_to_f64 ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_lit_to_f64_float() {
+        let lit = lit_from_tokens(quote::quote!(42.5));
+        let result = lit_to_f64(&lit).unwrap();
+        assert!((result - 42.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_lit_to_f64_int() {
+        let lit = lit_from_tokens(quote::quote!(42));
+        let result = lit_to_f64(&lit).unwrap();
+        assert!((result - 42.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    #[should_panic(expected = "numeric attribute value is always Float or Int")]
+    fn test_lit_to_f64_unreachable() {
+        let lit = lit_from_tokens(quote::quote!("hello"));
+        let _ = lit_to_f64(&lit);
+    }
+
+    // ── lit_to_u32 ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_lit_to_u32_int() {
+        let lit = lit_from_tokens(quote::quote!(42));
+        let result = lit_to_u32(&lit).unwrap();
+        assert_eq!(result, 42);
+    }
+
+    #[test]
+    fn test_lit_to_u32_float() {
+        let lit = lit_from_tokens(quote::quote!(42.5));
+        let result = lit_to_u32(&lit).unwrap();
+        assert_eq!(result, 42);
+    }
+
+    #[test]
+    #[should_panic(expected = "numeric attribute value is always Float or Int")]
+    fn test_lit_to_u32_unreachable() {
+        let lit = lit_from_tokens(quote::quote!("hello"));
+        let _ = lit_to_u32(&lit);
+    }
+}
