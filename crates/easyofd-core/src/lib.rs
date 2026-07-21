@@ -16,6 +16,6 @@ pub mod ofd_model;
 pub use error::{OfdError, OfdResult};
 pub use model::{
     ContentObject, ImageFormat, ImageObject, OfdMetadata, OfdPage, PathObject, TextObject,
-    page_size,
+    Watermark, page_size,
 };
 pub use ofd_model::{OfdField, OfdFieldKind, OfdModel};

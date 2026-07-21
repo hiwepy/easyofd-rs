@@ -243,6 +243,59 @@ impl ImageObject {
     pub fn png(x: f64, y: f64, width: f64, height: f64, data: Vec<u8>) -> Self {
         Self::new(x, y, width, height, data, ImageFormat::Png)
     }
+
+    /// Create an image object from a file path, auto-detecting the format.
+    ///
+    /// Reads the file and detects the format from:
+    /// - File extension (.jpg/.jpeg → Jpeg, .png → Png, .bmp → Bmp, .tiff/.tif → Tiff)
+    /// - Magic bytes (fallback if extension is ambiguous)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or the format is unsupported.
+    pub fn from_file(
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        path: impl AsRef<std::path::Path>,
+    ) -> crate::OfdResult<Self> {
+        let data = std::fs::read(path.as_ref()).map_err(crate::OfdError::Io)?;
+        let format = detect_image_format(path.as_ref(), &data);
+        Ok(Self::new(x, y, width, height, data, format))
+    }
+}
+
+/// Detect image format from file extension and/or magic bytes.
+fn detect_image_format(path: &std::path::Path, data: &[u8]) -> ImageFormat {
+    // Check extension first
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        match ext.to_lowercase().as_str() {
+            "jpg" | "jpeg" => return ImageFormat::Jpeg,
+            "png" => return ImageFormat::Png,
+            "bmp" => return ImageFormat::Bmp,
+            "tiff" | "tif" => return ImageFormat::Tiff,
+            _ => {}
+        }
+    }
+    // Fallback: magic bytes
+    if data.len() >= 2 && data[0] == 0xFF && data[1] == 0xD8 {
+        return ImageFormat::Jpeg;
+    }
+    if data.len() >= 4 && data[0] == 0x89 && data[1] == b'P' && data[2] == b'N' && data[3] == b'G' {
+        return ImageFormat::Png;
+    }
+    if data.len() >= 2 && data[0] == b'B' && data[1] == b'M' {
+        return ImageFormat::Bmp;
+    }
+    if data.len() >= 4
+        && ((data[0] == b'I' && data[1] == b'I') || (data[0] == b'M' && data[1] == b'M'))
+        && data[2] == 0x00 && data[3] == 0x2A
+    {
+        return ImageFormat::Tiff;
+    }
+    // Default to JPEG
+    ImageFormat::Jpeg
 }
 
 /// A vector path object (lines, rectangles, curves).
@@ -314,6 +367,111 @@ impl PathObject {
     #[must_use]
     pub fn fill_color(mut self, color: u32) -> Self {
         self.fill_color = Some(color);
+        self
+    }
+}
+
+// ─── Watermark / Annotation ──────────────────────────────────────────────────
+
+/// A watermark or annotation that can be placed on OFD pages.
+///
+/// Inspired by hutool's `OfdWriter.add(int page, Annotation)`.
+#[derive(Debug, Clone)]
+pub struct Watermark {
+    /// Watermark text (for text watermarks).
+    pub text: Option<String>,
+    /// Watermark image data (for image watermarks).
+    pub image: Option<Vec<u8>>,
+    /// Position (x, y) in mm.
+    pub position: (f64, f64),
+    /// Font size for text watermarks.
+    pub font_size: f64,
+    /// Font family for text watermarks.
+    pub font: String,
+    /// Text color as RGB hex.
+    pub color: u32,
+    /// Opacity 0.0 (transparent) – 1.0 (opaque). Default: 0.3.
+    pub opacity: f64,
+    /// Rotation angle in degrees. Default: 45.0 (diagonal).
+    pub rotation: f64,
+    /// Target page number (0-based). None = all pages.
+    pub page: Option<usize>,
+}
+
+impl Default for Watermark {
+    fn default() -> Self {
+        Self {
+            text: None,
+            image: None,
+            position: (0.0, 0.0),
+            font_size: 48.0,
+            font: "SimSun".to_string(),
+            color: 0xCC_CC_CC,
+            opacity: 0.3,
+            rotation: 45.0,
+            page: None,
+        }
+    }
+}
+
+impl Watermark {
+    /// Create a text watermark.
+    #[must_use]
+    pub fn text(text: impl Into<String>) -> Self {
+        Self {
+            text: Some(text.into()),
+            ..Default::default()
+        }
+    }
+
+    /// Create an image watermark.
+    #[must_use]
+    pub fn image(data: Vec<u8>) -> Self {
+        Self {
+            image: Some(data),
+            ..Default::default()
+        }
+    }
+
+    /// Set position.
+    #[must_use]
+    pub fn position(mut self, x: f64, y: f64) -> Self {
+        self.position = (x, y);
+        self
+    }
+
+    /// Set font size for text watermarks.
+    #[must_use]
+    pub fn font_size(mut self, size: f64) -> Self {
+        self.font_size = size;
+        self
+    }
+
+    /// Set opacity.
+    #[must_use]
+    pub fn opacity(mut self, val: f64) -> Self {
+        self.opacity = val;
+        self
+    }
+
+    /// Set rotation in degrees.
+    #[must_use]
+    pub fn rotation(mut self, degrees: f64) -> Self {
+        self.rotation = degrees;
+        self
+    }
+
+    /// Apply to a specific page.
+    #[must_use]
+    pub fn on_page(mut self, page: usize) -> Self {
+        self.page = Some(page);
+        self
+    }
+
+    /// Apply to all pages.
+    #[must_use]
+    pub fn on_all_pages(mut self) -> Self {
+        self.page = None;
         self
     }
 }
@@ -635,5 +793,73 @@ mod tests {
         assert!(format!("{text:?}").contains("Text"));
         assert!(format!("{img:?}").contains("Image"));
         assert!(format!("{path:?}").contains("Path"));
+    }
+
+    // ─── ImageObject::from_file ─────────────────────────────────────────────
+
+    #[test]
+    fn test_image_from_file_png() {
+        // Create a minimal PNG file
+        let dir = std::env::temp_dir().join("easyofd_img_test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("test.png");
+        // Minimal valid PNG: 8-byte signature + IHDR chunk (13 bytes) + IEND
+        let png: Vec<u8> = vec![
+            0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A, // signature
+        ];
+        std::fs::write(&path, &png).unwrap();
+
+        let img = ImageObject::from_file(0.0, 0.0, 10.0, 10.0, &path).unwrap();
+        assert_eq!(img.format, ImageFormat::Png);
+        assert!(!img.data.is_empty());
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_image_from_file_jpg_by_ext() {
+        let dir = std::env::temp_dir().join("easyofd_img_test2");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("test.jpg");
+        std::fs::write(&path, b"not-real-jpg").unwrap();
+
+        let img = ImageObject::from_file(0.0, 0.0, 10.0, 10.0, &path).unwrap();
+        assert_eq!(img.format, ImageFormat::Jpeg);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    // ─── Watermark ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_watermark_text_defaults() {
+        let wm = Watermark::text("CONFIDENTIAL");
+        assert_eq!(wm.text.as_deref(), Some("CONFIDENTIAL"));
+        assert_eq!(wm.font_size, 48.0);
+        assert_eq!(wm.opacity, 0.3);
+        assert_eq!(wm.rotation, 45.0);
+    }
+
+    #[test]
+    fn test_watermark_builder() {
+        let wm = Watermark::text("DRAFT")
+            .position(50.0, 100.0)
+            .font_size(36.0)
+            .opacity(0.2)
+            .rotation(0.0)
+            .on_page(0);
+        assert_eq!(wm.position, (50.0, 100.0));
+        assert_eq!(wm.page, Some(0));
+    }
+
+    #[test]
+    fn test_watermark_image() {
+        let wm = Watermark::image(vec![0xFF, 0xD8]);
+        assert!(wm.image.is_some());
+        assert!(wm.text.is_none());
+    }
+
+    #[test]
+    fn test_watermark_on_all_pages() {
+        let wm = Watermark::text("DRAFT").on_all_pages();
+        assert!(wm.page.is_none());
     }
 }

@@ -43,19 +43,19 @@
 // Re-export core types for convenience.
 pub use easyofd_core::{
     ContentObject, ImageFormat, ImageObject, OfdError, OfdField, OfdFieldKind, OfdMetadata,
-    OfdModel, OfdPage, OfdResult, PathObject, TextObject, page_size,
+    OfdModel, OfdPage, OfdResult, PathObject, TextObject, Watermark, page_size,
 };
 
 // Re-export derive macro.
 pub use easyofd_derive::OfdModel;
 
 // Re-export writer internals for advanced usage.
-pub use easyofd_writer::{OfdWriter, WriteOptions, EmbeddedFont, FontFormat};
+pub use easyofd_writer::{OfdWriter, WriteOptions, EmbeddedFont, FontFormat, OfdEditor};
 
 // Re-export reader for advanced usage.
 pub use easyofd_reader::OfdReader;
 
-/// Re-export template for advanced usage.
+// Re-export template for advanced usage.
 pub use easyofd_template::OfdTemplateFiller;
 
 // Re-export signature types for advanced usage.
