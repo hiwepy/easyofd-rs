@@ -443,6 +443,140 @@ impl Default for OfdWriter {
     }
 }
 
+// ─── OfdEditor — Open-and-edit existing OFD ───────────────────────────────────
+
+/// An OFD editor that opens, modifies, and saves an existing OFD document.
+///
+/// Inspired by hutool's `OfdWriter(File file)` constructor which opens
+/// existing files for editing.
+pub struct OfdEditor {
+    pages: Vec<easyofd_core::OfdPage>,
+    metadata: easyofd_core::OfdMetadata,
+    source_path: String,
+}
+
+impl OfdEditor {
+    /// Open an existing OFD file for editing.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or parsed.
+    pub fn open(path: impl Into<String>) -> easyofd_core::OfdResult<Self> {
+        let path_string: String = path.into();
+        let reader = easyofd_reader::OfdReader::open(&path_string)
+            .map_err(|e| easyofd_core::OfdError::InvalidDocument(format!("{e}")))?;
+        let pages = reader.pages().to_vec();
+        Ok(Self {
+            pages,
+            metadata: easyofd_core::OfdMetadata::default(),
+            source_path: path_string,
+        })
+    }
+
+    /// Number of pages in the opened document.
+    #[must_use]
+    pub fn page_count(&self) -> usize {
+        self.pages.len()
+    }
+
+    /// Add text to a specific page (0-based).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if page index is out of bounds.
+    pub fn add_text_to_page(
+        &mut self,
+        page_index: usize,
+        text: easyofd_core::TextObject,
+    ) -> easyofd_core::OfdResult<()> {
+        if let Some(page) = self.pages.get_mut(page_index) {
+            page.add_text(text);
+            Ok(())
+        } else {
+            Err(easyofd_core::OfdError::InvalidPage(format!(
+                "page {page_index} out of range (0..{})",
+                self.pages.len()
+            )))
+        }
+    }
+
+    /// Add an image to a specific page (0-based).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if page index is out of bounds.
+    pub fn add_image_to_page(
+        &mut self,
+        page_index: usize,
+        image: easyofd_core::ImageObject,
+    ) -> easyofd_core::OfdResult<()> {
+        if let Some(page) = self.pages.get_mut(page_index) {
+            page.add_image(image);
+            Ok(())
+        } else {
+            Err(easyofd_core::OfdError::InvalidPage(format!(
+                "page {page_index} out of range (0..{})",
+                self.pages.len()
+            )))
+        }
+    }
+
+    /// Append a new page to the document.
+    pub fn add_page(&mut self, page: easyofd_core::OfdPage) {
+        self.pages.push(page);
+    }
+
+    /// Apply watermarks to the document.
+    pub fn apply_watermarks(&mut self, watermarks: &[easyofd_core::Watermark]) {
+        for wm in watermarks {
+            for (i, page) in self.pages.iter_mut().enumerate() {
+                let target = wm.page.map_or(true, |p| p == i);
+                if !target {
+                    continue;
+                }
+                if let Some(ref text) = wm.text {
+                    page.add_text(
+                        easyofd_core::TextObject::new(wm.position.0, wm.position.1, text)
+                            .font(&wm.font)
+                            .size(wm.font_size)
+                            .color(wm.color),
+                    );
+                }
+                if let Some(ref data) = wm.image {
+                    page.add_image(easyofd_core::ImageObject::jpeg(
+                        wm.position.0, wm.position.1,
+                        100.0, 40.0, data.clone(),
+                    ));
+                }
+            }
+        }
+    }
+
+    /// Save to a new file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if ZIP creation or file I/O fails.
+    pub fn save(&self, path: impl AsRef<std::path::Path>) -> easyofd_core::OfdResult<()> {
+        let mut writer = OfdWriter::with_options(WriteOptions {
+            metadata: self.metadata.clone(),
+        });
+        for page in &self.pages {
+            writer.add_page(page.clone());
+        }
+        writer.build_to_file(path)
+    }
+
+    /// Overwrite the original file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if ZIP creation or file I/O fails.
+    pub fn save_overwrite(&self) -> easyofd_core::OfdResult<()> {
+        self.save(&self.source_path)
+    }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 #[allow(clippy::needless_pass_by_value)]
@@ -968,5 +1102,108 @@ mod tests {
         (0..archive.len())
             .map(|i| archive.by_index(i).unwrap().name().to_string())
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod editor_tests {
+    use super::*;
+    use easyofd_core::{OfdPage, TextObject, Watermark};
+
+    fn make_test_ofd() -> Vec<u8> {
+        let mut page = OfdPage::new(210.0, 297.0);
+        page.add_text(TextObject::new(10.0, 20.0, "Original text"));
+        let mut w = OfdWriter::new();
+        w.add_page(page);
+        w.build().unwrap()
+    }
+
+    #[test]
+    fn test_editor_open_and_save() {
+        let bytes = make_test_ofd();
+        let dir = std::env::temp_dir().join("easyofd_editor");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("test.ofd");
+        std::fs::write(&path, &bytes).unwrap();
+
+        let mut editor = OfdEditor::open(path.to_string_lossy().into_owned()).unwrap();
+        assert_eq!(editor.page_count(), 1);
+
+        // Add text to existing page
+        editor.add_text_to_page(0, TextObject::new(10.0, 40.0, "Edited text")).unwrap();
+
+        // Save to new file
+        let out = dir.join("edited.ofd");
+        editor.save(&out).unwrap();
+
+        let reader = easyofd_reader::OfdReader::open(&out).unwrap();
+        let text = reader.extract_all_text();
+        assert!(text.contains("Original text"));
+        assert!(text.contains("Edited text"));
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&out);
+    }
+
+    #[test]
+    fn test_editor_append_page() {
+        let bytes = make_test_ofd();
+        let dir = std::env::temp_dir().join("easyofd_editor2");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("test.ofd");
+        std::fs::write(&path, &bytes).unwrap();
+
+        let mut editor = OfdEditor::open(path.to_string_lossy().into_owned()).unwrap();
+        let mut new_page = OfdPage::new(210.0, 297.0);
+        new_page.add_text(TextObject::new(10.0, 20.0, "Page 2"));
+        editor.add_page(new_page);
+        assert_eq!(editor.page_count(), 2);
+
+        let out = dir.join("two_pages.ofd");
+        editor.save(&out).unwrap();
+
+        let reader = easyofd_reader::OfdReader::open(&out).unwrap();
+        assert_eq!(reader.page_count(), 2);
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&out);
+    }
+
+    #[test]
+    fn test_editor_watermark() {
+        let bytes = make_test_ofd();
+        let dir = std::env::temp_dir().join("easyofd_editor3");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("test.ofd");
+        std::fs::write(&path, &bytes).unwrap();
+
+        let mut editor = OfdEditor::open(path.to_string_lossy().into_owned()).unwrap();
+        editor.apply_watermarks(&[Watermark::text("CONFIDENTIAL").position(50.0, 150.0)]);
+
+        let out = dir.join("watermarked.ofd");
+        editor.save(&out).unwrap();
+
+        let reader = easyofd_reader::OfdReader::open(&out).unwrap();
+        let text = reader.extract_all_text();
+        assert!(text.contains("CONFIDENTIAL"));
+        assert!(text.contains("Original text"));
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&out);
+    }
+
+    #[test]
+    fn test_editor_invalid_page() {
+        let bytes = make_test_ofd();
+        let dir = std::env::temp_dir().join("easyofd_editor4");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("test.ofd");
+        std::fs::write(&path, &bytes).unwrap();
+
+        let mut editor = OfdEditor::open(path.to_string_lossy().into_owned()).unwrap();
+        let result = editor.add_text_to_page(99, TextObject::new(0.0, 0.0, "x"));
+        assert!(result.is_err());
+
+        let _ = std::fs::remove_file(&path);
     }
 }

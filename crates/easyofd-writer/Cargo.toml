@@ -9,6 +9,7 @@ repository.workspace = true
 
 [dependencies]
 easyofd-core = { workspace = true }
+easyofd-reader = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
