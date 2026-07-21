@@ -10,348 +10,278 @@
 
 ---
 
-`easyofd-rs` 为 OFD（开放版式文档）操作提供流畅、类型安全的 Builder API。  
-OFD 是中国国家标准 GB/T 33190-2016，广泛应用于政府和企业文档工作流——尤其是电子发票、公文和归档场景。
+`easyofd-rs` 为 OFD（开放版式文档）操作提供流畅、类型安全的 API：**创建**、**读取**、**模板填充**、**电子签章**、**PDF 互转**。
 
-`easyofd-rs` provides a fluent, type-safe builder API for all common OFD tasks: **creation**, **reading**, and **template filling**.  
 OFD is the Chinese national standard GB/T 33190-2016, widely used for electronic invoices, official documents, and archival purposes.
 
 ---
 
-## Table of Contents | 目录
+## Table of Contents 目录
 
-- [Features 功能](#features--功能)
-- [Architecture 架构](#architecture--架构)
-- [Quick Start 快速开始](#quick-start--快速开始)
-  - [Derive Model + One-liner Write 派生宏 + 一行写入](#1-derive-model--one-liner-write-派生宏--一行写入)
-  - [Manual Page Construction 手动构建页面](#2-manual-page-construction-手动构建页面)
-  - [Multiple Pages with Images and Paths 多页含图片和路径](#3-multiple-pages-with-images-and-paths-多页含图片和路径)
+- [Features 功能](#features-功能)
+- [Architecture 架构](#architecture-架构)
+- [Quick Start 快速开始](#quick-start-快速开始)
+  - [1. Write with Derive 派生宏写入](#1-write-with-derive-派生宏写入)
+  - [2. Manual Write 手动构建写入](#2-manual-write-手动构建写入)
+  - [3. Read 读取](#3-read-读取)
+  - [4. Template Fill 模板填充](#4-template-fill-模板填充)
+  - [5. Signature 电子签章](#5-signature-电子签章)
 - [API Reference API 参考](#api-reference--api-参考)
-  - [EasyOfd Entry Points 入口方法](#easyofd--entry-points-入口方法)
-  - [OfdWriterBuilder](#ofdwriterbuilder)
-  - [PageWriterBuilder](#pagewriterbuilder)
-  - [Core Types 核心类型](#core-types--核心类型)
 - [Design Principles 设计原则](#design-principles--设计原则)
 - [Roadmap 路线图](#roadmap--路线图)
-- [License 许可证](#license--许可证)
 
 ---
 
-## Features | 功能
+## Features 功能
 
-| Feature 功能 | Status 状态 | Description 描述 |
+| Feature 功能 | Status | Description 描述 |
 |:---|:---:|:---|
-| Create OFD (text, metadata) 创建含文本、元数据的 OFD | ✅ v0.1 | Build complete OFD ZIP archives |
-| `#[derive(OfdModel)]` macro 派生宏 | ✅ v0.1 | 编译期反射，替代 Java 注解扫描 |
-| Fluent Builder API 流式构建器 | ✅ v0.1 | `mut self -> Self` + `#[must_use]` |
-| Multi-page support 多页支持 | ✅ v0.1 | Each data item -> one page |
-| Image embedding (JPEG/PNG/BMP/TIFF) 图片嵌入 | ✅ v0.1 | Positioned image with resource embedding |
-| Vector paths (lines, rectangles) 矢量路径 | ✅ v0.1 | hline, vline, rect with stroke/fill |
-| OFD Reader OFD 读取 | 🚧 v0.2 | Parse OFD, extract content |
-| Template filling 模板填充 | 🚧 v0.2 | Placeholder-based template engine |
-| Digital signatures 电子签章 | 🚧 v0.3 | GB/T 38540 electronic seals |
-| Custom fonts 自定义字体 | 🚧 v0.3 | TTF/OTF embedding |
-| PDF ↔ OFD conversion 互转 | 🚧 v0.4 | PDF/OFD bidirectional |
+| Create OFD 创建 | ✅ v0.1 | Text, images, paths, metadata; fluent Builder API |
+| `#[derive(OfdModel)]` 派生宏 | ✅ v0.1 | Compile-time reflection; zero runtime cost |
+| Read OFD 读取 | ✅ v0.2 | SAX-based parsing; text extraction; structured content |
+| Template fill 模板填充 | ✅ v0.2 | `{key}` placeholder replacement; binary-preserving |
+| Digital signatures 电子签章 | ✅ v0.3 | GB/T 38540 seals; SM2WithSM3 / SHA256WithRSA |
+| Custom fonts 自定义字体 | ✅ v0.3 | TTF/OTF embedding; EmbeddedFont + FontFormat |
+| PDF ↔ OFD 互转 | ✅ v0.4 | Bidirectional conversion API; ConvertOptions |
+| Multi-page 多页 | ✅ v0.1 | Each data item → one page |
+| Vector paths 矢量路径 | ✅ v0.1 | hline, vline, rect with stroke/fill |
 
 ---
 
-## Architecture | 架构
+## Architecture 架构
 
 ```
-┌───────────────────────────────────────────────┐
-│                  easyofd                       │
-│         (facade · Builder entry points)        │
-│    EasyOfd::write()  write_pages()  ...        │
-├───────┬───────┬───────────────────────────────┤
-│ core  │derive │ writer                        │
-│ types │macro  │  ZIP + XML (GB/T 33190)       │
-│ errors│#[derive│  thiserror, zip, uuid,       │
-│ traits│(OfdMod- │  quick-xml, chrono           │
-│ model │  el)    │                              │
-└───────┴───────┴───────────────────────────────┘
+easyofd-rs (9 crates)
+├── easyofd            🎯 Facade — EasyOfd::write/read/fill_template
+├── easyofd-core       🧩 Types, traits, errors, data model
+├── easyofd-derive     ⚡ Proc-macro shim (6 lines)
+├── easyofd-derive-impl ⚙️ All derive logic (400 lines)
+├── easyofd-reader     📖 SAX-based OFD parsing
+├── easyofd-writer     ✍️ ZIP/XML generation + custom fonts
+├── easyofd-template   📋 Placeholder replacement engine
+├── easyofd-signature  🔐 GB/T 38540 electronic seals
+└── easyofd-convert    🔄 PDF ↔ OFD bridge
 ```
-
-| Crate 子包 | Purpose 用途 | Dependencies 依赖 |
-|:---|:---|---|
-| **easyofd** | Facade + Builder entry points 外观入口 | All sub-crates |
-| **easyofd-core** | Types, traits, errors, model 核心抽象 | thiserror, chrono |
-| **easyofd-derive** | `#[derive(OfdModel)]` proc-macro 编译期反射 | syn, quote, proc-macro2 |
-| **easyofd-writer** | OFD ZIP/XML writer 合规写入器 | easyofd-core, zip, uuid, quick-xml |
 
 ---
 
-## Quick Start | 快速开始
-
-Add to your `Cargo.toml`:
+## Quick Start 快速开始
 
 ```toml
 [dependencies]
-easyofd = "0.1"
+easyofd = "0.4"
 ```
 
-### 1. Derive Model + One-liner Write 派生宏 + 一行写入
+### 1. Write with Derive 派生宏写入
 
 ```rust
 use easyofd::{EasyOfd, OfdModel};
 
 #[derive(OfdModel)]
-#[ofd(page_width = 210.0, page_height = 297.0)]   // A4
+#[ofd(page_width = 210.0, page_height = 297.0)]  // A4
 struct Invoice {
     #[ofd(x = 20.0, y = 30.0, size = 18.0, bold)]
     title: String,
-
     #[ofd(x = 20.0, y = 50.0)]
     amount: String,
-
-    #[ofd(x = 20.0, y = 70.0)]
-    note: String,
-
-    // Fields with `#[ofd(ignore)]` are excluded from output
+    #[ofd(x = 20.0, y = 70.0, kind = "image", img_width = 30.0, img_height = 30.0)]
+    seal: Vec<u8>,
     #[ofd(ignore)]
     internal_id: u64,
 }
 
-// One-liner: multiple data items → multiple pages
-let data = vec![
-    Invoice { title: "Invoice #001".into(), amount: "$100.00".into(),
-              note: "First".into(), internal_id: 1 },
-    Invoice { title: "Invoice #002".into(), amount: "$200.00".into(),
-              note: "Second".into(), internal_id: 2 },
-];
-
-EasyOfd::write::<Invoice>("invoices.ofd")
+let data = vec![Invoice { /* ... */ }];
+EasyOfd::write::<Invoice>("out.ofd")
     .metadata_title("Invoices")
-    .metadata_author("easyofd-rs")
     .do_write(&data)?;
 ```
 
-### 2. Manual Page Construction 手动构建页面
-
-```rust
-use easyofd::{EasyOfd, OfdPage, TextObject, page_size};
-
-let mut page = OfdPage::new(page_size::A4.0, page_size::A4.1);
-page.add_text(
-    TextObject::new(20.0, 30.0, "Hello OFD!")
-        .font("SimHei")
-        .size(24.0)
-        .bold()
-);
-
-// Write to bytes or file
-let bytes = EasyOfd::write_pages_to_bytes(vec![page])?;
-std::fs::write("hello.ofd", bytes)?;
-```
-
-### 3. Multiple Pages with Images and Paths 多页含图片和路径
+### 2. Manual Write 手动构建写入
 
 ```rust
 use easyofd::{EasyOfd, OfdPage, TextObject, ImageObject, PathObject};
 
-// Page 1: text + image + separator line
-let mut page1 = OfdPage::new(210.0, 297.0);
-page1.add_text(TextObject::new(20.0, 30.0, "Invoice").size(18.0).bold());
-page1.add_path(PathObject::hline(20.0, 55.0, 190.0));
-page1.add_text(TextObject::new(20.0, 60.0, "Item A  ......  $100.00"));
-page1.add_image(ImageObject::jpeg(
-    150.0, 30.0, 30.0, 30.0,
-    std::fs::read("seal.jpg")?,
-));
+let mut page = OfdPage::new(210.0, 297.0);
+page.add_text(TextObject::new(20.0, 30.0, "Title").size(24.0).bold());
+page.add_path(PathObject::hline(20.0, 55.0, 190.0));
+page.add_image(ImageObject::jpeg(150.0, 30.0, 30.0, 30.0, std::fs::read("seal.jpg")?));
 
-// Page 2
-let mut page2 = OfdPage::new(210.0, 297.0);
-page2.add_text(TextObject::new(20.0, 30.0, "Terms & Conditions").size(14.0));
-page2.add_path(PathObject::rect(10.0, 10.0, 190.0, 277.0).stroke_color(0x333333));
-
-EasyOfd::write_pages("document.ofd")
+EasyOfd::write_pages("doc.ofd")
     .metadata_title("My Document")
-    .do_write(vec![page1, page2])?;
+    .do_write(vec![page])?;
+```
+
+### 3. Read 读取
+
+```rust
+let reader = EasyOfd::read("input.ofd")?;
+println!("Pages: {}", reader.page_count());
+
+// Extract per-page text
+for (i, text) in reader.extract_text().iter().enumerate() {
+    println!("Page {}: {}", i + 1, text);
+}
+
+// Or all text at once
+let all = reader.extract_all_text();
+
+// Access structured content
+for page in reader.pages() {
+    for obj in &page.content {
+        match obj {
+            ContentObject::Text(t) => println!("Text: {}", t.text),
+            ContentObject::Image(_) => println!("Image found"),
+            ContentObject::Path(_) => println!("Path found"),
+        }
+    }
+}
+```
+
+### 4. Template Fill 模板填充
+
+```rust
+use std::collections::HashMap;
+
+let mut data = HashMap::new();
+data.insert("title".into(), "Invoice #001".into());
+data.insert("amount".into(), "$1,234.00".into());
+data.insert("date".into(), "2026-01-15".into());
+
+EasyOfd::fill_template("template.ofd", &data)?
+    .save("output.ofd")?;
+```
+
+### 5. Signature 电子签章
+
+```rust
+use easyofd::{OfdSignatureBuilder, ElectronicSeal, SignatureAlgorithm};
+
+let seal = ElectronicSeal {
+    image_data: std::fs::read("seal.png")?,
+    name: "Company Seal".into(),
+    position: (150.0, 200.0),
+    page: 1,
+};
+
+OfdSignatureBuilder::new("document.ofd")
+    .seal(seal)
+    .algorithm(SignatureAlgorithm::Sm2WithSm3)
+    .sign()?
+    .save("signed.ofd")?;
 ```
 
 ---
 
-## API Reference | API 参考
+## API Reference  API 参考
 
-### EasyOfd | Entry Points 入口方法
+### EasyOfd Entry Points 入口
 
-| Method 方法 | Signature 签名 | Returns 返回 |
-|:---|---|:---|
-| `write::<T>` | `(path: impl Into<String>)` | `OfdWriterBuilder<T>` |
-| `write_pages` | `(path: impl Into<String>)` | `PageWriterBuilder` |
-| `write_pages_to` | `(path, pages: Vec<OfdPage>)` | `OfdResult<()>` |
-| `write_pages_to_bytes` | `(pages: Vec<OfdPage>)` | `OfdResult<Vec<u8>>` |
+| Method 方法 | Signature 签名 | Description |
+|:---|:---|:---|
+| `write::<T>` | `(path) -> OfdWriterBuilder<T>` | 派生宏写入 |
+| `write_pages` | `(path) -> PageWriterBuilder` | 手动构建写入 |
+| `read` | `(path) -> OfdResult<OfdReader>` | 读取 OFD |
+| `fill_template` | `(path, &HashMap) -> OfdResult<OfdTemplateFiller>` | 模板填充 |
+| `write_pages_to` | `(path, Vec<OfdPage>) -> OfdResult<()>` | 直接写入文件 |
+| `write_pages_to_bytes` | `(Vec<OfdPage>) -> OfdResult<Vec<u8>>` | 写入内存 |
+| `read_from_bytes` | `(&[u8]) -> OfdResult<OfdReader>` | 从内存读取 |
 
 ### OfdWriterBuilder\<T: OfdModel\>
 
 | Method | Signature | Description |
-|:---|---|:---|
-| `metadata_title(mut self, title) -> Self` | Set document title 设置文档标题 |
-| `metadata_author(mut self, author) -> Self` | Set document author 设置作者 |
-| `metadata_creator(mut self, creator) -> Self` | Set creator application name 设置创建程序 |
-| `do_write(&self, data: &[T]) -> OfdResult<()>` | Write to file path 写入文件 |
-| `do_write_to_bytes(&self, data: &[T]) -> OfdResult<Vec<u8>>` | Write to in-memory bytes 写入内存 |
+|:---|:---|:---|
+| `metadata_title` | `(title) -> Self` | 设置文档标题 |
+| `metadata_author` | `(author) -> Self` | 设置作者 |
+| `metadata_creator` | `(creator) -> Self` | 设置创建程序 |
+| `do_write` | `(&self, &[T]) -> OfdResult<()>` | 写入文件 |
+| `do_write_to_bytes` | `(&self, &[T]) -> OfdResult<Vec<u8>>` | 写入内存 |
 
-### PageWriterBuilder
+### OfdReader
 
-| Method | Signature | Description |
-|:---|---|:---|
-| `metadata_title(mut self, title) -> Self` | Set document title 设置文档标题 |
-| `metadata_author(mut self, author) -> Self` | Set document author 设置作者 |
-| `metadata_creator(mut self, creator) -> Self` | Set creator application name 设置创建程序 |
-| `do_write(&self, pages: Vec<OfdPage>) -> OfdResult<()>` | Write to file path 写入文件 |
-| `do_write_to_bytes(&self, pages: Vec<OfdPage>) -> OfdResult<Vec<u8>>` | Write to in-memory bytes 写入内存 |
+| Method | Returns | Description |
+|:---|:---|:---|
+| `open(path)` | `OfdResult<Self>` | 打开文件 |
+| `from_bytes(&[u8])` | `OfdResult<Self>` | 从内存解析 |
+| `page_count()` | `usize` | 页数 |
+| `pages()` | `&[OfdPage]` | 结构化页面 |
+| `extract_text()` | `Vec<String>` | 每页文本 |
+| `extract_all_text()` | `String` | 全部文本 |
 
-### Core Types | 核心类型
+### OfdSignatureBuilder
 
-<details>
-<summary>Click to expand 点击展开</summary>
+| Method | Description |
+|:---|:---|
+| `new(path)` | 创建构建器 |
+| `seal(ElectronicSeal)` | 添加印章 |
+| `algorithm(SignatureAlgorithm)` | 签名算法 |
+| `certificate(Vec<u8>)` | 设置证书 |
+| `private_key(Vec<u8>)` | 设置私钥 |
+| `sign() -> OfdResult<SignedOfd>` | 执行签章 |
 
-#### OfdModel Trait 派生宏 Trait
+### Content Objects 内容对象
 
-```rust
-pub trait OfdModel: Sized {
-    fn schema() -> &'static [OfdField];
-    fn page_size() -> (f64, f64) { (210.0, 297.0) }
-    fn to_page(&self) -> OfdResult<OfdPage>;
-    fn to_pages(items: &[Self]) -> OfdResult<Vec<OfdPage>>;
-}
-```
+| Type | Key Constructors | Description |
+|:---|:---|:---|
+| `TextObject` | `new(x,y,text) .font().size().bold().italic().color()` | 文本块 |
+| `ImageObject` | `new(x,y,w,h,data,fmt) .jpeg() .png()` | 图片 |
+| `PathObject` | `new(x,y,data) .hline() .vline() .rect()` | 矢量路径 |
+| `OfdPage` | `new(width,height) .add_text() .add_image() .add_path()` | 页面 |
 
-#### `#[ofd(...)]` Field Attributes 字段属性
+### `#[ofd(...)]` Attributes 属性
 
-| Attribute 属性 | Type 类型 | Default 默认 | Description 描述 |
+| Attribute | Type | Default | Description |
 |:---|:---|:---|:---|
-| `x` | f64 | required 必填 | X position in mm |
-| `y` | f64 | required 必填 | Y position in mm |
-| `font` | str | `"SimSun"` | Font family name 字体名称 |
-| `size` | f64 | `12.0` | Font size in pt 字号 |
-| `bold` | flag | false | Bold text (weight 700) 加粗 |
-| `weight` | u32 | `400` | Font weight 字重 |
-| `italic` | flag | false | Italic text 斜体 |
-| `color` | u32 | `0` | RGB color as hex (e.g. `0xFF0000`) 颜色 |
-| `kind` | str | `"text"` | Render kind: `"text"` or `"image"` 渲染类型 |
-| `img_width` | f64 | `30.0` | Image width in mm (kind="image") 图片宽度 |
-| `img_height` | f64 | `30.0` | Image height in mm (kind="image") 图片高度 |
-| `ignore` | flag | false | Skip this field entirely 忽略此字段 |
-
-#### Struct-level Attributes 结构体级属性
-
-| Attribute 属性 | Type 类型 | Default 默认 | Description 描述 |
-|:---|:---|:---|:---|
-| `page_width` | f64/integer | `210.0` | Page width in mm 页面宽度 |
-| `page_height` | f64/integer | `297.0` | Page height in mm 页面高度 |
-
-#### Content Objects 内容对象
-
-| Type 类型 | Description 描述 |
-|:---|:---|
-| `TextObject` | Positioned text: x, y, font, size, weight, color, italic 文本块 |
-| `ImageObject` | Positioned image: x, y, width, height, data, format (JPEG/PNG/BMP/TIFF) 图片 |
-| `PathObject` | Vector path: x, y, stroke_color, stroke_width, fill_color, path_data 矢量路径 |
-| `OfdPage` | Page: width, height, content: Vec<ContentObject> 页面 |
-
-#### TextObject Builder Methods 文本构建器方法
-
-| Method | Description |
-|:---|:---|
-| `TextObject::new(x, y, text)` | Create with position and text |
-| `.font("SimHei")` | Set font family |
-| `.size(24.0)` | Set font size in pt |
-| `.bold()` | Set bold (weight 700) |
-| `.italic()` | Set italic |
-| `.color(0xFF0000)` | Set color as RGB hex |
-
-#### ImageObject Constructors 图片构造方法
-
-| Method | Description |
-|:---|:---|
-| `ImageObject::new(x, y, w, h, data, format)` | Generic constructor |
-| `ImageObject::jpeg(x, y, w, h, data)` | JPEG shortcut |
-| `ImageObject::png(x, y, w, h, data)` | PNG shortcut |
-
-#### PathObject Constructors 路径构造方法
-
-| Method | Description |
-|:---|:---|
-| `PathObject::new(x, y, path_data)` | Generic constructor |
-| `PathObject::hline(x1, y, x2)` | Horizontal line |
-| `PathObject::vline(x, y1, y2)` | Vertical line |
-| `PathObject::rect(x, y, w, h)` | Rectangle outline |
-| `.stroke_color(0x333333)` | Set stroke color |
-| `.stroke_width(1.5)` | Set stroke width |
-| `.fill_color(0xCCCCCC)` | Set fill color |
-
-#### Page Sizes 页面尺寸 (mm)
-
-| Constant 常量 | Dimensions 尺寸 |
-|:---|:---|
-| `page_size::A4` | `(210.0, 297.0)` |
-| `page_size::A4_LANDSCAPE` | `(297.0, 210.0)` |
-| `page_size::A3` | `(297.0, 420.0)` |
-| `page_size::LETTER` | `(215.9, 279.4)` |
-
-#### Errors 错误类型
-
-| Variant 变体 | Description 描述 |
-|:---|:---|
-| `OfdError::Io(e)` | Wraps `std::io::Error` I/O 错误 |
-| `OfdError::Xml(msg)` | XML serialization error XML 序列化错误 |
-| `OfdError::Zip(msg)` | ZIP archive error ZIP 归档错误 |
-| `OfdError::InvalidDocument(msg)` | Invalid OFD document structure 无效文档结构 |
-| `OfdError::InvalidPage(msg)` | Invalid page content 无效页面内容 |
-| `OfdError::Conversion(msg)` | Type conversion error 类型转换错误 |
-| `OfdError::Model(msg)` | Model mapping error 模型映射错误 |
-
-```rust
-pub type OfdResult<T> = std::result::Result<T, OfdError>;
-```
-
-</details>
+| `x, y` | f64/int | required | Position in mm |
+| `font` | str | `"SimSun"` | Font family |
+| `size` | f64 | `12.0` | Font size in pt |
+| `bold` | flag | — | Bold (weight 700) |
+| `weight` | u32 | `400` | Font weight |
+| `italic` | flag | — | Italic |
+| `color` | u32 | `0` | RGB hex (e.g. `0xFF0000`) |
+| `kind` | str | `"text"` | `"text"` or `"image"` |
+| `ignore` | flag | — | Skip field |
+| `page_width/height` | f64/int | `210.0/297.0` | Struct-level: page size |
 
 ---
 
-## Design Principles | 设计原则
+## Design Principles 设计原则
 
 | Principle 原则 | Practice 实践 |
 |:---|:---|
 | **Pure Rust 纯 Rust** | `#![forbid(unsafe_code)]` in every crate |
-| **Type-safe builders 类型安全构建器** | `mut self -> Self`, `#[must_use]` on all builders |
-| **Compile-time reflection 编译期反射** | `#[derive(OfdModel)]` generates mapping code — no runtime reflection |
+| **Type-safe builders 类型安全构建器** | `mut self → Self`, `#[must_use]` |
+| **Compile-time reflection 编译期反射** | `#[derive(OfdModel)]` — no runtime overhead |
 | **Trait extensibility Trait 可扩展** | `OfdModel` trait for custom implementations |
-| **Single error type 统一错误类型** | `OfdError` enum with `thiserror`, single `OfdResult<T>` alias |
-| **Zero-cost abstractions 零成本抽象** | Builder chains compile to direct calls, derive macros expand at compile time |
-| **Separation of concerns 关注点分离** | Core types ≠ writer implementation ≠ facade |
-| **Inspired by EasyExcel 继承设计** | Same builder · derive · facade patterns as `easyexcel-rs` |
+| **Single error type 统一错误** | `OfdError` enum, `OfdResult<T>` alias |
+| **Separation of concerns 关注点分离** | 9 crates, each with one job |
 
 ---
 
-## Roadmap | 路线图
+## Roadmap 路线图
 
-| Phase 阶段 | Focus 重点 | Key Deliverables 关键交付 |
-|:---:|:---|:---|
-| **v0.1** ✅ | Foundation 基础 | Workspace, 4 crates, core types, ZIP/XML writer, derive macro, builder API, 98.14% coverage |
-| **v0.2** 🚧 | Reader & Template 读取与模板 | OFD reader, template placeholder filling, text rendering with font embedding |
-| **v0.3** | Security 安全 | Electronic seals & signatures (GB/T 38540), encryption |
-| **v0.4** | Converters 转换 | PDF ↔ OFD bidirectional conversion, image format conversion |
-| **v1.0** | Stable 稳定版 | Stable API, full test coverage, performance benchmarks, documentation |
+| Phase 阶段 | Status | Deliverables 交付 |
+|:---:|:---:|:---|
+| **v0.1** | ✅ | Core types, Writer, Derive macro, Builder API |
+| **v0.2** | ✅ | OFD Reader, Template engine |
+| **v0.3** | ✅ | Electronic seals (GB/T 38540), Custom fonts |
+| **v0.4** | ✅ | PDF ↔ OFD conversion bridge |
+| **v1.0** | 🔜 | Stable API, full integration tests, performance benchmarks |
 
 ---
 
-## License | 许可证
+## License 许可证
 
 Apache-2.0
 
----
-
-## Related Projects | 相关项目
+## Related Projects 相关项目
 
 - [easyexcel-rs](https://github.com/hiwepy/easyexcel-rs) — Rust port of Alibaba EasyExcel
-- [easyexcel](https://github.com/alibaba/easyexcel) — Original Java library by Alibaba
+- [easyexcel](https://github.com/alibaba/easyexcel) — Original Java library
 - [ofd-rs](https://crates.io/crates/ofd-rs) — Lower-level OFD writer crate
-- [ofd-core](https://crates.io/crates/ofd-core) — OFD XML parsing & data model crate
+- [ofd-core](https://crates.io/crates/ofd-core) — OFD XML parsing & data model
 
 ---
 
 <p align="center">
-  <sub>Built with Rust 🦀 · Follows <a href="https://github.com/hiwepy/easyexcel-rs">easyexcel-rs</a> conventions</sub>
+  <sub>Built with Rust 🦀 &middot; 9 crates &middot; 177 tests &middot; Follows <a href="https://github.com/hiwepy/easyexcel-rs">easyexcel-rs</a> conventions</sub>
 </p>
