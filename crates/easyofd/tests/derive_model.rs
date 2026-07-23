@@ -316,7 +316,7 @@ fn test_easyofd_write_derive_model() {
 
     let bytes = EasyOfd::write::<Invoice>("test_derive.ofd")
         .metadata_title("Invoices")
-        .metadata_author("easyofd-rs")
+        .metadata_author("easyofd-rust")
         .do_write_to_bytes(&data)
         .unwrap();
 

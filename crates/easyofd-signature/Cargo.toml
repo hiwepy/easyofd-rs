@@ -1,6 +1,6 @@
 [package]
 name = "easyofd-signature"
-description = "OFD electronic seal/signature (GB/T 38540) for easyofd-rs"
+description = "OFD electronic seal/signature (GB/T 38540) for easyofd-rust"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

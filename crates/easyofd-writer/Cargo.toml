@@ -1,6 +1,6 @@
 [package]
 name = "easyofd-writer"
-description = "OFD file writer for easyofd-rs"
+description = "OFD file writer for easyofd-rust"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

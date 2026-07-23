@@ -1,7 +1,7 @@
-# easyofd-rs Architecture Design Document · 架构设计文档
+# easyofd-rust Architecture Design Document · 架构设计文档
 
 > **Version**: 0.4.0 | **Date**: 2026-07-21 | **Status**: v0.4 Complete  
-> **Author**: easyofd-rs team | **License**: Apache-2.0
+> **Author**: easyofd-rust team | **License**: Apache-2.0
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## 1. Project Vision 项目愿景
 
-`easyofd-rs` aims to provide **the same developer experience for OFD operations** that
+`easyofd-rust` aims to provide **the same developer experience for OFD operations** that
 [easyexcel-rs](https://github.com/hiwepy/easyexcel-rs) provides for Excel:
 
 > **Type-safe Builders + Compile-time Reflection + GB/T 33190-2016 Compliant = Ergonomic OFD manipulation in idiomatic Rust.**
@@ -61,7 +61,7 @@
 ## 3. Crate Architecture 包架构
 
 ```
-easyofd-rs/  (workspace, edition 2021, resolver="2")
+easyofd-rust/  (workspace, edition 2021, resolver="2")
 │
 ├── crates/
 │   ├── easyofd/                    🎯 FACADE — user-facing entry point
@@ -441,7 +441,7 @@ convert_image(&[u8], ImageConvertFormat::Png)
 
 ## 15. Conventions from easyexcel-rs 继承约定
 
-| Convention 约定 | easyexcel-rs | easyofd-rs |
+| Convention 约定 | easyexcel-rs | easyofd-rust |
 |:---|:---|:---|
 | **Workspace** | Virtual manifest + `[workspace.dependencies]` | ✅ 9 crates |
 | **MSRV** | 1.88 | 1.70 (broader compatibility) |

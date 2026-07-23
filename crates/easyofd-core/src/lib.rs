@@ -1,6 +1,6 @@
 //! # easyofd-core
 //!
-//! Core types, traits, and models for the easyofd-rs OFD document library.
+//! Core types, traits, and models for the easyofd-rust OFD document library.
 //!
 //! This crate provides:
 //! - [`model`] — OFD data model types (`OfdPage`, `TextObject`, `ImageObject`, etc.)

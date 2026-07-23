@@ -1,6 +1,6 @@
 [package]
 name = "easyofd-derive"
-description = "Derive macros for easyofd-rs (#[derive(OfdModel)])"
+description = "Derive macros for easyofd-rust (#[derive(OfdModel)])"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
