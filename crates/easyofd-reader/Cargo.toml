@@ -1,6 +1,6 @@
 [package]
 name = "easyofd-reader"
-description = "OFD file reader for easyofd-rs"
+description = "OFD file reader for easyofd-rust"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -1,6 +1,6 @@
 //! # easyofd-convert
 //!
-//! Bidirectional PDF ↔ OFD conversion for easyofd-rs.
+//! Bidirectional PDF ↔ OFD conversion for easyofd-rust.
 //!
 //! ## Status: v0.4 — API design complete, conversion logic stubs
 //!

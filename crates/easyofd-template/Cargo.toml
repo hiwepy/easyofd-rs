@@ -1,6 +1,6 @@
 [package]
 name = "easyofd-template"
-description = "OFD template engine for easyofd-rs"
+description = "OFD template engine for easyofd-rust"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

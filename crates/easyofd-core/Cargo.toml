@@ -1,6 +1,6 @@
 [package]
 name = "easyofd-core"
-description = "Core types, traits, and models for easyofd-rs"
+description = "Core types, traits, and models for easyofd-rust"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

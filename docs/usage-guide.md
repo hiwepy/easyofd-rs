@@ -1,6 +1,6 @@
-# easyofd-rs Usage Guide 使用指南
+# easyofd-rust Usage Guide 使用指南
 
-> Step-by-step examples for all easyofd-rs operations.
+> Step-by-step examples for all easyofd-rust operations.
 
 ---
 
@@ -65,7 +65,7 @@ fn generate_certificate() -> easyofd::OfdResult<()> {
     EasyOfd::write::<Certificate>("certificates.ofd")
         .metadata_title("Certificates")
         .metadata_author("Training Dept")
-        .metadata_creator("easyofd-rs")
+        .metadata_creator("easyofd-rust")
         .do_write(&data)?;
 
     Ok(())

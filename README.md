@@ -1,4 +1,4 @@
-# easyofd-rs &middot; [English](#easyofd-rs) | [中文](#easyofd-rs-中文)
+# easyofd-rust &middot; [English](#easyofd-rust) | [中文](#easyofd-rust-中文)
 
 > **An idiomatic Rust library for quick OFD document operations.**  
 > Inspired by [Alibaba EasyExcel](https://github.com/alibaba/easyexcel)'s builder-pattern API design.  
@@ -10,7 +10,7 @@
 
 ---
 
-`easyofd-rs` 为 OFD（开放版式文档）操作提供流畅、类型安全的 API：**创建**、**读取**、**模板填充**、**电子签章**、**PDF 互转**。
+`easyofd-rust` 为 OFD（开放版式文档）操作提供流畅、类型安全的 API：**创建**、**读取**、**模板填充**、**电子签章**、**PDF 互转**。
 
 OFD is the Chinese national standard GB/T 33190-2016, widely used for electronic invoices, official documents, and archival purposes.
 
@@ -51,7 +51,7 @@ OFD is the Chinese national standard GB/T 33190-2016, widely used for electronic
 ## Architecture 架构
 
 ```
-easyofd-rs (9 crates)
+easyofd-rust (9 crates)
 ├── easyofd            🎯 Facade — EasyOfd::write/read/fill_template
 ├── easyofd-core       🧩 Types, traits, errors, data model
 ├── easyofd-derive     ⚡ Proc-macro shim (6 lines)

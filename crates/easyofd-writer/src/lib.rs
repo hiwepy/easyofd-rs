@@ -46,8 +46,8 @@ impl Default for WriteOptions {
             metadata: OfdMetadata {
                 version: "1.0".to_string(),
                 title: Some("EasyOFD Document".to_string()),
-                author: Some("easyofd-rs".to_string()),
-                creator: Some("easyofd-rs".to_string()),
+                author: Some("easyofd-rust".to_string()),
+                creator: Some("easyofd-rust".to_string()),
                 creation_date: Some(Utc::now().naive_utc()),
             },
         }
@@ -681,8 +681,8 @@ mod tests {
         let opts = WriteOptions::default();
         assert_eq!(opts.metadata.version, "1.0");
         assert_eq!(opts.metadata.title.as_deref(), Some("EasyOFD Document"));
-        assert_eq!(opts.metadata.author.as_deref(), Some("easyofd-rs"));
-        assert_eq!(opts.metadata.creator.as_deref(), Some("easyofd-rs"));
+        assert_eq!(opts.metadata.author.as_deref(), Some("easyofd-rust"));
+        assert_eq!(opts.metadata.creator.as_deref(), Some("easyofd-rust"));
         assert!(opts.metadata.creation_date.is_some());
     }
 

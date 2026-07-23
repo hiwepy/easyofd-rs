@@ -198,7 +198,7 @@ fn build_signature_xml(
   </ofd:SignedInfo>
   <ofd:SignedValue>PLACEHOLDER_{status}</ofd:SignedValue>
 </ofd:Signature>"#,
-        "easyofd-rs",
+        "easyofd-rust",
         chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S"),
         seals.len(),
     )
